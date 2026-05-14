@@ -1,0 +1,31 @@
+# --- OS & IDE ---
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# --- Frontend (Vue/Vite/Tailwind) ---
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# --- Backend (Go) ---
+backend/vendor/
+backend/main
+backend/*.exe
+backend/*.test
+backend/bin/
+
+# --- Database & Local Data ---
+# We ignore the local data folder so your personal notes 
+# don't accidentally get pushed to the cloud.
+backend/data/
+*.db
+*.db-journal
+
+# --- Docker ---
+.docker/

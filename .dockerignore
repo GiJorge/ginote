@@ -1,0 +1,28 @@
+# Ignore dependency folders (Docker will install them fresh inside the container)
+**/node_modules/
+**/vendor/
+
+# Ignore local build outputs
+**/dist/
+**/main
+**/bin/
+
+# Ignore version control
+.git
+.gitignore
+
+# Ignore local data and secrets
+**/data/
+*.db
+*.env
+*.env.*
+
+# Ignore documentation and logs
+README.md
+LICENSE
+*.log
+
+# Ignore Docker-related files
+Dockerfile
+docker-compose.yml
+.dockerignore

@@ -1,0 +1,26 @@
+{
+  "name": "note-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.0",
+    "axios": "^1.16.0",
+    "marked": "^18.0.3",
+    "marked-gfm-heading-id": "^4.1.4",
+    "vue": "^3.5.34"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "autoprefixer": "^10.5.0",
+    "default": "^0.1.1",
+    "tailwindcss": "^4.3.0",
+    "vite": "^8.0.12"
+  }
+}
