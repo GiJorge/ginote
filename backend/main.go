@@ -11,7 +11,9 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
+"context"
+"os/signal"
+	"syscall"
 	"github.com/gin-gonic/gin"
 	"github.com/jaytaylor/html2text"
 	"github.com/russross/blackfriday/v2"
@@ -201,67 +203,82 @@ func deleteNote(c *gin.Context) {
 // --- MAIN ---
 
 func main() {
-
-db= initDB()
-// 2. CRITICAL: Check if it's nil before doing anything else
+    db = initDB()
     if db == nil {
         log.Fatal("Database object is nil. Check initDB logic.")
     }
 
-    // 3. Close it later
-    defer db.Close()
+    r := gin.Default()
 
+    // 1. Setup CORS
+    r.Use(func(c *gin.Context) {
+        c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+        c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE")
+        c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+        if c.Request.Method == "OPTIONS" {
+            c.AbortWithStatus(204)
+            return
+        }
+        c.Next()
+    })
 
-	r := gin.Default()
+    api := r.Group("/api")
+    {
+        api.POST("/notes", saveNote)
+        api.GET("/notes", getNotes)
+        api.DELETE("/notes/:id", deleteNote)
+        api.POST("/notes/:id/translate", translateNote)
+    }
 
-    // 1. Setup CORS (important if you still use different ports in dev)
-    r.Use(corsMiddleware())
-
-	
-	// Simple CORS
-	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	})
-
-	api := r.Group("/api")
-	{
-		api.POST("/notes", saveNote)
-		api.GET("/notes", getNotes)
-		api.DELETE("/notes/:id", deleteNote)
-		api.POST("/notes/:id/translate", translateNote)
-	}
-// Match the favicon specifically
-r.StaticFile("/favicon.svg", "./dist/favicon.svg")
-//r.StaticFile("/favicon.ico", "./dist/assets/favicon.ico")
-
-	// 3. Serve Frontend Static Files
-    // This tells Go: "If a request starts with /assets, look in ./dist/assets"
+    r.StaticFile("/favicon.svg", "./dist/favicon.svg")
     r.Static("/assets", "./dist/assets")
     
-    // 4. Handle Vue Router (The "Catch-All")
-    // If the user hits any other route, send them index.html
     r.NoRoute(func(c *gin.Context) {
         c.File("./dist/index.html")
     })
 
-	//fmt.Println("Server running on :8389")
-	//r.Run(":8389")
+    // --- GRACEFUL SHUTDOWN LOGIC START ---
 
+    // Define the HTTP Server
+    srv := &http.Server{
+        Addr:    ":8389",
+        Handler: r,
+    }
 
+    // Start server in a goroutine so it doesn't block the signal listener
+    go func() {
+        log.Println("🚀 Server starting on :8389")
+        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+            log.Fatalf("listen: %s\n", err)
+        }
+    }()
 
-log.Println("🚀 Server starting on :8389")
-	// Ensure this matches your EXPOSE 8389 in Dockerfile
-	if err := r.Run(":8389"); err != nil {
-		log.Fatal(err)
-	}
+    // Channel to listen for interrupt signals (Docker Stop / Ctrl+C)
+    quit := make(chan os.Signal, 1)
+    // SIGINT = Ctrl+C, SIGTERM = Docker Stop
+    signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
+    // Block here until we get a signal
+    <-quit
+    log.Println("Shutting down server...")
+
+    // Give current requests 5 seconds to finish
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+    if err := srv.Shutdown(ctx); err != nil {
+        log.Fatal("Server forced to shutdown:", err)
+    }
+
+    // Close the database connection manually after the server stops
+    if err := db.Close(); err != nil {
+        log.Printf("Error closing database: %v", err)
+    } else {
+        log.Println("✅ Database connection closed safely.")
+    }
+
+    log.Println("Server exiting")
+    // --- GRACEFUL SHUTDOWN LOGIC END ---
 }
 
 
