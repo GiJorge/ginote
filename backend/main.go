@@ -238,8 +238,8 @@ db= initDB()
 		api.POST("/notes/:id/translate", translateNote)
 	}
 // Match the favicon specifically
-r.StaticFile("/favicon.ico", "./dist/favicon.ico")
-
+r.StaticFile("/favicon.svg", "./dist/favicon.svg")
+//r.StaticFile("/favicon.ico", "./dist/assets/favicon.ico")
 
 	// 3. Serve Frontend Static Files
     // This tells Go: "If a request starts with /assets, look in ./dist/assets"
@@ -254,9 +254,11 @@ r.StaticFile("/favicon.ico", "./dist/favicon.ico")
 	//fmt.Println("Server running on :8389")
 	//r.Run(":8389")
 
+
+
 log.Println("🚀 Server starting on :8389")
 	// Ensure this matches your EXPOSE 8389 in Dockerfile
-	if err := r.Run("0.0.0.0:8389"); err != nil {
+	if err := r.Run(":8389"); err != nil {
 		log.Fatal(err)
 	}
 
