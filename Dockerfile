@@ -13,6 +13,9 @@ WORKDIR /app
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
+
+
+
 # We build the binary here
 RUN CGO_ENABLED=1 GOOS=linux go build -o main .
 
@@ -20,6 +23,10 @@ RUN CGO_ENABLED=1 GOOS=linux go build -o main .
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates libc6-compat
 WORKDIR /root/
+
+# This ensures the internal mount point exists before the volume attaches
+RUN mkdir -p /root/data && chmod 777 /root/data
+ENV DB_PATH=/root/data/notes.db
 
 # Copy the Go binary from Stage 2
 COPY --from=backend-builder /app/main .

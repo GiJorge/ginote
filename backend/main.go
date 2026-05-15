@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	
+	"path/filepath"
 	"log"
 	"net/http"
 	"net/url"
@@ -16,6 +16,7 @@ import (
 	"github.com/jaytaylor/html2text"
 	"github.com/russross/blackfriday/v2"
 	_ "modernc.org/sqlite"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // --- DATA STRUCTURES ---
@@ -31,34 +32,60 @@ type Note struct {
 var db *sql.DB
 
 // --- DATABASE ---
-
-func initDB() {
-	var err error
-
-// Check if we are in Docker or Local
-    dbPath := os.Getenv("DB_PATH")
-    if dbPath == "" {
-        dbPath = "./data/notes.db" // Local dev
-    }
-
-	db, err = sql.Open("sqlite", "./notes.db")
-	if err != nil {
-		log.Fatal(err)
+func initDB() *sql.DB {
+	// 1. Determine the database path
+	// If DB_PATH is set (Docker), use it. 
+	// Otherwise (Local Dev), use "notes.db" in the current folder.
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "data/notes.db"
 	}
 
-	schema := `
+	// 2. Ensure the directory exists (important for Docker)
+	// This prevents the "unable to open database file" error
+	dir := filepath.Dir(dbPath)
+	if dir != "." {
+		if err := os.MkdirAll(dir, 0777); err != nil {
+			log.Fatalf("❌ Failed to create database directory: %v", err)
+		}
+	}
+
+	// 3. Define the connection string with performance optimizations
+	// WAL mode allows concurrent reads/writes; busy_timeout prevents locking crashes
+	dsn := dbPath + "?_journal_mode=WAL&_busy_timeout=5000"
+
+	// 4. Open the connection
+	db, err := sql.Open("sqlite3", dsn)
+	if err != nil {
+		log.Fatalf("❌ Failed to register sqlite3 driver: %v", err)
+	}
+
+	// 5. Test the connection
+	// This is where permission issues are caught immediately
+	err = db.Ping()
+	if err != nil {
+		log.Fatalf("❌ Database reachable but NOT accessible at %s: %v", dbPath, err)
+	}
+
+	// 6. Initialize Schema
+	query := `
 	CREATE TABLE IF NOT EXISTS notes (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		title TEXT,
+		title TEXT NOT NULL,
 		content TEXT,
 		amharic_content TEXT,
 		category TEXT,
-		created_at DATETIME
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
-	_, err = db.Exec(schema)
+
+	_, err = db.Exec(query)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("❌ Failed to initialize table structure: %v", err)
 	}
+
+	log.Printf("✅ Database initialized successfully at: %s", dbPath)
+	return db
 }
 
 // --- TRANSLATION LOGIC (NO EXTERNAL LIB NEEDED) ---
@@ -174,7 +201,17 @@ func deleteNote(c *gin.Context) {
 // --- MAIN ---
 
 func main() {
-	initDB()
+
+db= initDB()
+// 2. CRITICAL: Check if it's nil before doing anything else
+    if db == nil {
+        log.Fatal("Database object is nil. Check initDB logic.")
+    }
+
+    // 3. Close it later
+    defer db.Close()
+
+
 	r := gin.Default()
 
     // 1. Setup CORS (important if you still use different ports in dev)
@@ -200,6 +237,8 @@ func main() {
 		api.DELETE("/notes/:id", deleteNote)
 		api.POST("/notes/:id/translate", translateNote)
 	}
+// Match the favicon specifically
+r.StaticFile("/favicon.ico", "./dist/favicon.ico")
 
 
 	// 3. Serve Frontend Static Files
@@ -212,8 +251,15 @@ func main() {
         c.File("./dist/index.html")
     })
 
-	fmt.Println("Server running on :8389")
-	r.Run(":8389")
+	//fmt.Println("Server running on :8389")
+	//r.Run(":8389")
+
+log.Println("🚀 Server starting on :8389")
+	// Ensure this matches your EXPOSE 8389 in Dockerfile
+	if err := r.Run("0.0.0.0:8389"); err != nil {
+		log.Fatal(err)
+	}
+
 }
 
 

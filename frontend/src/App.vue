@@ -3,8 +3,32 @@
   <div :class="{ 'dark': isDark }">
     <div class="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300">
 
+<!-- Mobile Overlay -->
+    <div 
+      v-if="isSidebarOpen" 
+      @click="isSidebarOpen = false"
+      class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+    ></div>
+
+<!-- Mobile Action Bar 
+<div class="fixed bottom-6 right-6 md:hidden flex flex-col gap-3">
+  <button 
+    @click="saveNote" 
+    class="w-14 h-14 rounded-full bg-indigo-600 text-white shadow-2xl flex items-center justify-center active:scale-95 transition-transform"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+  </button>
+</div>-->
+
+
     <!-- Sidebar -->
-  <aside class="w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col">
+ <aside 
+      :class="[
+        'fixed inset-y-0 left-0 z-50 w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0',
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      ]"
+    >
+    
      <div class="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <h2 class="font-bold text-xl text-indigo-600">NoteHub</h2>
       <div class="flex gap-2">
@@ -44,7 +68,17 @@
 
     <!-- Main Content -->
    <main class="flex-1 flex flex-col bg-white dark:bg-slate-950 overflow-hidden">
-  
+  <!-- Top Mobile Header -->
+      <header class="flex items-center justify-between p-4 md:hidden border-b border-slate-200 dark:border-slate-800">
+        <button @click="isSidebarOpen = true" class="p-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        <span class="font-bold">GiNote</span>
+        <div class="w-10"></div> <!-- Spacer for balance -->
+      </header>
+
+
+
   <!-- HEADER: Changes based on Mode -->
   <header class="h-16 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center px-8 shrink-0">
     <!-- Show Edit/Preview Toggles ONLY when in Edit/Preview mode -->
@@ -61,38 +95,38 @@
     <div class="flex gap-4">
       <!-- Edit Button: Only shows in Read Mode -->
       <button v-if="viewMode === 'read'" @click="startEditing" class="px-6 py-2 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-        Edit Note
+      ✏️
       </button>
 
-         <button v-if="viewMode === 'preview'" @click="translateNote" :disabled="isTranslating" class="bg-purple-600 text-white px-4 py-2 rounded">
-  {{ isTranslating ? 'Translating...' : 'Translate to Amharic 🇪🇹' }}
+         <button v-if="viewMode === 'preview'" @click="translateNote" :disabled="isTranslating" class=" text-white px-4 py-2 rounded">
+  {{ isTranslating ? 'Translating...' : '🇪🇹' }}
 </button>
 
 
 
 
 
-          <button v-if="currentNoteId" @click="deleteNote" class="bg-red-500 text-white px-4 py-2 rounded">Delete</button>
+          <button v-if="currentNoteId" @click="deleteNote" class=" text-white px-4 py-2 rounded">❌</button>
       
       <!-- Save Button: Shows in Edit/Preview -->
-      <button v-if="viewMode !== 'read'" @click="saveNote" class="px-6 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow-lg shadow-indigo-100 dark:shadow-none">
-        Save Changes
+      <button v-if="viewMode !== 'read'" @click="saveNote" class="px-6 py-2  text-white rounded-lg font-bold shadow-lg shadow-indigo-100 dark:shadow-none">
+      💾
       </button>
     </div>
   </header>
 
-  <div class="flex-1 p-10 overflow-y-auto">
+  <div class="flex-1 sm:p-10 p-4 overflow-y-auto">
     <div class="max-w-4xl mx-auto">
 
       <!-- 1. STANDALONE READ MODE -->
       <div v-if="viewMode === 'read'" class="animate-in fade-in duration-500">
-        <h1 class="text-6xl font-black mb-10 text-slate-900 dark:text-white leading-tight">{{ note.title }}</h1>
+        <h1 class="md:text-6xl text-3xl font-black sm:mb-10  text-slate-900 dark:text-white leading-tight">{{ note.title }}</h1>
         
         <article class="prose dark:prose-invert max-w-none">
           <div class="text-lg" v-html="previewHtml"></div>
         </article>
 
-        <div v-if="note.amharic_content" class="mt-16 p-10 bg-slate-50 dark:bg-slate-900/50 rounded-[40px] border border-slate-100 dark:border-slate-800">
+        <div v-if="note.amharic_content" class="sm:mt-16 sm:p-10 p-2  bg-slate-50 dark:bg-slate-900/50 sm:rounded-[40px] border border-slate-100 dark:border-slate-800">
           <h4 class="text-indigo-500 font-bold text-xs uppercase tracking-widest mb-6">Amharic Version</h4>
             <article class="prose dark:prose-invert max-w-none">
               <div class="text-lg" v-html="previewHtmlamh"></div>
@@ -224,7 +258,7 @@
 import { ref, computed, onMounted ,watch, nextTick} from 'vue';
 import axios from 'axios';
 import { marked } from 'marked';
-
+const isSidebarOpen = ref(false)
 
 const isDark = ref(true)
 
@@ -256,9 +290,9 @@ onMounted(() => {
 
 
 
-//const API_URL = '/api';
+const API_URL = '/api';
 
-const API_URL = "http://localhost:8389/api";
+//const API_URL = "http://localhost:8389/api";
 const notesList = ref([]);
 const isEditing = ref(true);
 //const viewMode = ref('edit');
@@ -362,12 +396,14 @@ const fetchNotes = async () => {
 const selectNote = (n) => {
   // If we have a draft of the same note, load the draft instead of the list version
   const draft = localStorage.getItem('ginote_draft');
+  isSidebarOpen.value = false; // Close sidebar on mobile after selecting a note
   if (draft) {
     const parsedDraft = JSON.parse(draft);
     if (parsedDraft.id === n.id) {
       note.value = parsedDraft;
       currentNoteId.value = n.id;
       viewMode.value = 'read';
+      
       return;
     }
   }
@@ -376,12 +412,8 @@ const selectNote = (n) => {
   note.value = { ...n };
   currentNoteId.value = n.id;
   viewMode.value = 'read';
+  
 };
-
-
-
-
-
 
 
 const startEditing = () => {
@@ -394,6 +426,7 @@ const resetForm = () => {
   currentNoteId.value = null;
   isEditing.value = true;
    viewMode.value = 'edit';
+   isSidebarOpen.value = false; // Close sidebar on mobile after selecting "New Note"
 };
 
 // const saveNote = async () => {
@@ -429,13 +462,6 @@ const saveNote = async () => {
 
 
 
-
-
-
-
-
-
-
 const deleteNote = async () => {
   if (confirm("Delete this note?")) {
     await axios.delete(`${API_URL}/notes/${currentNoteId.value}`);
@@ -457,9 +483,6 @@ const translateNote = async () => {
     isTranslating.value = false;
   }
 };
-
-
-
 
 
 
